@@ -54,6 +54,21 @@ class ArticleAdminController extends BaseController
 
         $form->handleRequest($request);
         if ($form->isSubmitted() && $form->isValid()) {
+            /** @var UploadedFile $uploadedFile */
+            $uploadedFile = $form['imageFile']->getData();
+            if ($uploadedFile) {
+                $destination = $this->getParameter('kernel.project_dir'). '/public/uploads/article_image';
+
+                $originalFileName = pathinfo($uploadedFile->getClientOriginalName(), PATHINFO_FILENAME);
+                $newFileName = Urlizer::urlize($originalFileName) . '-'.\uniqid() . '.' . $uploadedFile->guessExtension();
+
+                $uploadedFile->move(
+                    $destination,
+                    $newFileName
+                );
+                $article->setImageFilename($newFileName);
+            }
+
             $em->persist($article);
             $em->flush();
 
@@ -67,21 +82,6 @@ class ArticleAdminController extends BaseController
         return $this->render('article_admin/edit.html.twig', [
             'articleForm' => $form->createView()
         ]);
-    }
-
-    /**
-     * @Route("/admin/upload/test", name="upload_test")
-     */
-    public function temporaryUploadAction(Request $request)
-    {
-        /** @var UploadedFile $uploadedFile */
-        $uploadedFile = $request->files->get('image');
-        $destination = $this->getParameter('kernel.project_dir'). '/public/uploads';
-
-        $originalFileName = pathinfo($uploadedFile->getClientOriginalName(), PATHINFO_FILENAME);
-        $newFileName = Urlizer::urlize($originalFileName) . '-'.\uniqid() . '.' . $uploadedFile->guessExtension();
-
-        dd($uploadedFile->move($destination, $newFileName));
     }
 
     /**
