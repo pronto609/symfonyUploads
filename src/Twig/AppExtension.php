@@ -3,6 +3,7 @@
 namespace App\Twig;
 
 use App\Service\MarkdownHelper;
+use App\Service\UploaderHelper;
 use Psr\Container\ContainerInterface;
 use Symfony\Contracts\Service\ServiceSubscriberInterface;
 use Twig\Extension\AbstractExtension;
@@ -16,6 +17,13 @@ class AppExtension extends AbstractExtension implements ServiceSubscriberInterfa
     public function __construct(ContainerInterface $container)
     {
         $this->container = $container;
+    }
+
+    public function getFunctions()
+    {
+        return [
+            new TwigFunction('uploaded_asset', [$this, 'getUploadedAsset'])
+        ];
     }
 
     public function getFilters(): array
@@ -32,10 +40,17 @@ class AppExtension extends AbstractExtension implements ServiceSubscriberInterfa
             ->parse($value);
     }
 
+    public function getUploadedAsset(string $path): string
+    {
+        return $this->container->get(UploaderHelper::class)
+            ->getPublicPath($path);
+    }
+
     public static function getSubscribedServices()
     {
         return [
             MarkdownHelper::class,
+            UploaderHelper::class
         ];
     }
 }
