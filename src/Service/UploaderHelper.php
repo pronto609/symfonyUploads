@@ -26,15 +26,21 @@ class UploaderHelper
      * @var LoggerInterface
      */
     private $logger;
+    /**
+     * @var string
+     */
+    private $uploadedAssetsBaseUrl;
 
     public function __construct(
         FilesystemInterface $publicUploadFilesystem,
         RequestStackContext $requestStackContext,
-        LoggerInterface $logger
+        LoggerInterface $logger,
+        string $uploadedAssetsBaseUrl
     ) {
         $this->requestStackContext = $requestStackContext;
         $this->publicUploadFilesystem = $publicUploadFilesystem;
         $this->logger = $logger;
+        $this->uploadedAssetsBaseUrl = $uploadedAssetsBaseUrl;
     }
 
     public function uploadArticleImage(File $file, ?string $existingFilename = null): string
@@ -86,6 +92,6 @@ class UploaderHelper
     public function getPublicPath(string $path): string
     {
         return $this->requestStackContext
-            ->getBasePath().'/uploads/' . $path;
+            ->getBasePath().$this->uploadedAssetsBaseUrl.'/' . $path;
     }
 }
