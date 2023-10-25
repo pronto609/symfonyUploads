@@ -3,7 +3,9 @@
 namespace App\Service;
 
 use Gedmo\Sluggable\Util\Urlizer;
+use League\Flysystem\FileNotFoundException;
 use League\Flysystem\FilesystemInterface;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\Asset\Context\RequestStackContext;
 use Symfony\Component\HttpFoundation\File\File;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
@@ -20,16 +22,22 @@ class UploaderHelper
      * @var FilesystemInterface
      */
     private $filesystem;
+    /**
+     * @var LoggerInterface
+     */
+    private $logger;
 
     public function __construct(
         FilesystemInterface $publicUploadFilesystem,
-        RequestStackContext $requestStackContext
+        RequestStackContext $requestStackContext,
+        LoggerInterface $logger
     ) {
         $this->requestStackContext = $requestStackContext;
         $this->publicUploadFilesystem = $publicUploadFilesystem;
+        $this->logger = $logger;
     }
 
-    public function uploadArticleImage(File $file): string
+    public function uploadArticleImage(File $file, ?string $existingFilename = null): string
     {
         if ($file instanceof UploadedFile) {
             $originalFileName = $file->getClientOriginalName();
@@ -39,10 +47,38 @@ class UploaderHelper
 
         $newFileName = Urlizer::urlize(pathinfo($originalFileName, PATHINFO_FILENAME)) . '-'.\uniqid() . '.' . $file->guessExtension();
 
-        $this->publicUploadFilesystem->write(
+        $stream = fopen($file->getPathname(), 'r');
+        $result = $this->publicUploadFilesystem->writeStream(
             self::ARTICLE_IMAGE . '/' . $newFileName,
-            file_get_contents($file->getPathname())
+            $stream
         );
+
+        if (false === $result) {
+            throw new \Exception(
+                sprintf('Could not upload file "%s"', $newFileName)
+            );
+        }
+
+        if (is_resource($stream)) {
+            fclose($stream);
+        }
+
+        if ($existingFilename) {
+            try {
+                $result = $this->publicUploadFilesystem->delete(self::ARTICLE_IMAGE . '/' . $existingFilename);
+
+                if (false === $result) {
+                    throw new \Exception(
+                        sprintf('Could not delete old file "%s"', $newFileName)
+                    );
+                }
+            } catch (FileNotFoundException $exception) {
+                $this->logger->alert(
+                    sprintf('file name "%s" does not exists, but trying to delete', $existingFilename)
+                );
+            }
+
+        }
 
         return $newFileName;
     }
