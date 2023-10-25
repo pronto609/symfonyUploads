@@ -10,3 +10,20 @@ liip_imagine:
         squared_thumbnail_medium:
             filters:
                 thumbnail: { size: [500, 500], mode: outbound }
+
+    loaders:
+        filesystem_loader:
+            flysystem:
+                filesystem_service: oneup_flysystem.public_uploads_filesystem_filesystem
+
+    #default loader to use for all filter sets
+    data_loader: filesystem_loader
+
+    resolvers:
+        filesystem_resolver:
+            flysystem:
+                filesystem_service: oneup_flysystem.public_uploads_filesystem_filesystem
+                root_url: "/uploads"
+                cache_prefix: media/cache
+
+    cache: filesystem_resolver
